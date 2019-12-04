@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!--
+    <script src="assets/bootstrap/js/bootstrap.bundle.js"></script>
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    -->
+    <link rel="stylesheet" href="assets/style.css">
+    <script src="assets/script.js"></script>
+    <title>PICX</title>
+    <meta charset="utf-8">
+</head>
+<body>
+<nav class="navbar">
+    <a class="navlogo" href="#">
+        <img src="assets/logo.png">
+    </a>
+    <div>
+        <ul class="navbar-menu">
+            {{ range .Pages }}
+                {{if .Display }}
+                    <li class="navbar-item">
+                        <a class="navbar-link {{if isset "Url" .}}{{if eq .Url ""}}control{{end}}{{end}}" {{if isset "Url" .}}{{if ne .Url ""}}href="{{.Url}}"{{end}}{{end}}
+                           id="{{.HtmlId}}">{{.Title}}</a>
+                    </li>
+                    {{if isset "CustomContent" .}}
+                        {{noescape .CustomContent}}
+                    {{end}}
+                {{ end }}
+            {{ end }}
+        </ul>
+    </div>
+</nav>
+</body>
+<script>
+    let modal = document.getElementById("register-modal");
+    let btn = document.getElementById("register-link");
+    let span = document.getElementsByClassName("close")[0];
+    btn.onclick = function () {
+        modal.style.display = "block";
+    };
+    span.onclick = function () {
+        modal.style.display = "none";
+    };
+    window.onclick = function (event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+</script>
+<form action="/register" method="post">
+    <input type="text">
+    <input type="submit" value="registrieren">
+</form>
+</html>
