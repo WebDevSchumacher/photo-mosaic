@@ -1,0 +1,9 @@
+.note-content {
+    white-space: pre;
+}
+.delete {
+    float: right;
+}
+.note {
+    margin: 1em;
+}
