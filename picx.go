@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 	"html/template"
 	"log"
 	"net/http"
@@ -31,11 +34,27 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	fmt.Println(r.PostForm)
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249").C("users")
+	error := db.Insert(bson.M{
+		"username": r.PostForm.Get("username"),
+		"password": r.PostForm.Get("password"),
+	})
+	if error != nil {
 
+		fmt.Println(error.Error())
+	}
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-
+	r.ParseForm()
 }
 
 func someHandler(w http.ResponseWriter, r *http.Request) {
@@ -51,15 +70,28 @@ func getContent() content {
 		CustomContent: `<div id="register-modal" class="modal">
   <div class="modal-content">
     <span class="close">&times;</span>
-    <p>Some text in the Modal..</p>
+    <form action="/register" method="post">
+    <input class="input" type="text" name="username" placeholder="Benutzer" required>
+    <input class="input" type="password" name="password" placeholder="Passwort" required minlength="3">
+    <input class="button" type="submit" value="registrieren">
+</form>
   </div>
 </div>`,
 	}
 	login := page{
 		HtmlId:  "login-link",
-		Url:     "login",
 		Title:   "Login",
 		Display: true,
+		CustomContent: `<div id="login-modal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <form action="/login" method="post">
+    <input class="input" type="text" name="username" placeholder="Benutzer" required>
+    <input class="input" type="password" name="password" placeholder="Passwort" required minlength="3">
+    <input class="button" type="submit" value="einloggen">
+</form>
+  </div>
+</div>`,
 	}
 	somePage := page{
 		Url:     "somepage",
@@ -94,6 +126,8 @@ func main() {
 	pages := getContent().Pages
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/login", loginHandler)
 
 	for _, page := range pages {
 		if isset("Url", page) && page.Url != "" && isset("handler", page) && page.handler != nil {
