@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -8,12 +9,14 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strings"
+	"time"
 )
 
 type page struct {
 	//Id    bson.ObjectId `json:"id" bson:"_id,omitempty"`
 	HtmlId        string
-	Url           string
+	Url           string `json:"group,omitempty" bson:",omitempty"`
 	Title         string
 	handler       func(http.ResponseWriter, *http.Request)
 	Display       bool
@@ -23,89 +26,137 @@ type content struct {
 	Pages []page
 }
 
+type message struct {
+	Success bool
+	Message string
+	Path    string `json:",omitempty" bson:",omitempty"`
+}
+
+type user struct {
+	Id       bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	Username string
+	Password string
+}
+
+//var pageContent = &content{}
+
 var funcs = template.FuncMap{"isset": isset, "noescape": noescape}
+var t, err = template.New("Picx").Funcs(funcs).ParseFiles("templates/index.html")
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	t, error := template.New("Picx").Funcs(funcs).ParseFiles("templates/index.html")
-	if error != nil {
-		log.Fatal(error)
-	}
-	t.ExecuteTemplate(w, "index.html", getContent())
+	cookie, _ := r.Cookie("token")
+	loggedIn := cookie != nil
+	pages := getContent(loggedIn)
+	fmt.Println("index handler")
+	fmt.Println(loggedIn)
+	fmt.Println(cookie)
+
+	t.ExecuteTemplate(w, "index.html", pages)
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	fmt.Println(r.PostForm)
 	session, err := mgo.Dial("localhost")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer session.Close()
 	db := session.DB("Picx_ASchumacher_630249").C("users")
-	error := db.Insert(bson.M{
-		"username": r.PostForm.Get("username"),
-		"password": r.PostForm.Get("password"),
+	err = db.Insert(bson.M{
+		"username": r.PostFormValue("username"),
+		"password": r.PostFormValue("password"),
 	})
-	if error != nil {
-
-		fmt.Println(error.Error())
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			response, _ := json.Marshal(message{Success: false, Message: "Name bereits vergeben"})
+			w.Write(response)
+		}
+		return
 	}
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	response, _ := json.Marshal(message{Success: true, Message: "Registrierung erfolgreich"})
+	w.Write(response)
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249").C("users")
+	var user user
+	err = db.Find(bson.M{
+		"username": r.PostFormValue("username"),
+	}).One(&user)
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil { //len(users) == 0 {
+		response, _ := json.Marshal(message{Success: false, Message: "User nicht gefunden"})
+		w.Write(response)
+		return
+	}
+	if user.Password == r.PostFormValue("password") {
+		response, _ := json.Marshal(message{Success: true, Message: "Willkommen an Bord " + user.Username, Path: "login"})
+		http.SetCookie(w, &http.Cookie{
+			Name:    "token",
+			Value:   user.Id.Hex(),
+			Expires: time.Now().Add(500 * time.Second),
+		})
+		w.Write(response)
+		return
+	}
+	response, _ := json.Marshal(message{Success: false, Message: "falsches Passwort"})
+	w.Write(response)
 }
 
-func someHandler(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func getContent() content {
+func getContent(loggedIn bool) content {
 	register := page{
 		HtmlId:  "register-link",
 		Title:   "Registrieren",
-		handler: registerHandler,
-		Display: true,
-		CustomContent: `<div id="register-modal" class="modal">
-  <div class="modal-content">
-    <span class="close">&times;</span>
-    <form action="/register" method="post">
-    <input class="input" type="text" name="username" placeholder="Benutzer" required>
-    <input class="input" type="password" name="password" placeholder="Passwort" required minlength="3">
-    <input class="button" type="submit" value="registrieren">
-</form>
-  </div>
-</div>`,
+		Display: !loggedIn,
 	}
 	login := page{
 		HtmlId:  "login-link",
 		Title:   "Login",
-		Display: true,
-		CustomContent: `<div id="login-modal" class="modal">
-  <div class="modal-content">
-    <span class="close">&times;</span>
-    <form action="/login" method="post">
-    <input class="input" type="text" name="username" placeholder="Benutzer" required>
-    <input class="input" type="password" name="password" placeholder="Passwort" required minlength="3">
-    <input class="button" type="submit" value="einloggen">
-</form>
-  </div>
-</div>`,
+		Display: !loggedIn,
 	}
-	somePage := page{
-		Url:     "somepage",
-		Title:   "some Page",
-		handler: someHandler,
-		Display: false,
+	logout := page{
+		HtmlId:  "logout-link",
+		Title:   "Logout",
+		Display: loggedIn,
 	}
-	content := content{
+	baseImages := page{
+		HtmlId:  "base-images-link",
+		Title:   "Basismotive",
+		Display: loggedIn,
+	}
+	pools := page{
+		HtmlId:  "pools-link",
+		Title:   "Kachelpools",
+		Display: loggedIn,
+	}
+	mosaics := page{
+		HtmlId:  "mosaics-link",
+		Title:   "Mosaike",
+		Display: loggedIn,
+	}
+	deleteAccount := page{
+		HtmlId:  "delete-account-link",
+		Title:   "Account löschen",
+		Display: loggedIn,
+	}
+
+	pageContent := content{
 		[]page{
 			register,
 			login,
-			somePage,
-		}}
-	return content
+			logout,
+			baseImages,
+			pools,
+			mosaics,
+			deleteAccount,
+		},
+	}
+	return pageContent
 }
 
 func isset(name string, data interface{}) bool {
@@ -123,17 +174,17 @@ func noescape(str string) template.HTML {
 }
 
 func main() {
-	pages := getContent().Pages
+	//getContent()
+	//pages := &pageContent.Pages
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login", loginHandler)
 
-	for _, page := range pages {
-		if isset("Url", page) && page.Url != "" && isset("handler", page) && page.handler != nil {
-			http.HandleFunc("/"+page.Url, page.handler)
-		}
-	}
-
+	//for _, page := range pageContent.Pages {
+	//	if isset("Url", page) && page.Url != "" && isset("handler", page) && page.handler != nil {
+	//		http.HandleFunc("/"+page.Url, page.handler)
+	//	}
+	//}
 	http.ListenAndServe(":4242", nil)
 }
