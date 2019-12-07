@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="assets/style.css">
+    <script src="assets/script.js"></script>
+    <title>PICX</title>
+    <meta charset="utf-8">
+</head>
+<body>
+<nav class="navbar">
+    <a class="navlogo" href="#">
+        <img src="assets/logo.png">
+    </a>
+    <div>
+        <ul class="navbar-menu">
+            {{ range .Pages }}
+                {{if .Display }}
+                    <li class="navbar-item">
+                        <a class="navbar-link control" id="{{.HtmlId}}">{{.Title}}</a>
+                    </li>
+                {{ end }}
+            {{ end }}
+        </ul>
+    </div>
+</nav>
+<div id="message-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="message-close">&times;</span>
+        <span id="message-text"></span>
+    </div>
+</div>
+<div id="register-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="register-close">&times;</span>
+        <form id="register-form">
+            <input class="input" type="text" name="username" placeholder="Benutzer" required>
+            <input class="input" type="password" name="password" placeholder="Passwort" required minlength="3">
+            <button class="button" type="button" id="register-button">registrieren</button>
+        </form>
+    </div>
+</div>
+<div id="login-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="login-close">&times;</span>
+        <form id="login-form">
+            <input class="input" type="text" name="username" placeholder="Benutzer" required>
+            <input class="input" type="password" name="password" placeholder="Passwort" required minlength="3">
+            <button class="button" type="button" id="login-button">login</button>
+        </form>
+    </div>
+</div>

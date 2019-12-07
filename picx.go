@@ -1,14 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"html/template"
 	"log"
 	"net/http"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -23,7 +24,9 @@ type page struct {
 	CustomContent string
 }
 type content struct {
-	Pages []page
+	Pages              []page
+	InnerContent       *template.Template
+	InnerContentString string
 }
 
 type message struct {
@@ -38,20 +41,32 @@ type user struct {
 	Password string
 }
 
-//var pageContent = &content{}
+type baseBrowser struct {
+}
 
+var innerPageContent = &template.Template{}
+var t *template.Template
+var pageContent content
 var funcs = template.FuncMap{"isset": isset, "noescape": noescape}
-var t, err = template.New("Picx").Funcs(funcs).ParseFiles("templates/index.html")
+
+//var t, err = template.New("Picx").Funcs(funcs).ParseFiles("templates/index.html")
+var routeMatch *regexp.Regexp
+
+func exec(w http.ResponseWriter, name string) {
+	w.WriteHeader(200)
+	t.ExecuteTemplate(w, name, pageContent)
+}
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie("token")
 	loggedIn := cookie != nil
-	pages := getContent(loggedIn)
-	fmt.Println("index handler")
-	fmt.Println(loggedIn)
-	fmt.Println(cookie)
+	getContent(loggedIn)
 
-	t.ExecuteTemplate(w, "index.html", pages)
+	tpl := &bytes.Buffer{}
+	t.ExecuteTemplate(tpl, "index_inner.html", nil)
+	pageContent.InnerContentString = tpl.String()
+	exec(w, "index.html")
+	return
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,8 +122,28 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	response, _ := json.Marshal(message{Success: false, Message: "falsches Passwort"})
 	w.Write(response)
 }
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
 
-func getContent(loggedIn bool) content {
+}
+func deleteAccountHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+func baseImagesHandler(w http.ResponseWriter, r *http.Request) {
+	tpl := &bytes.Buffer{}
+	t.ExecuteTemplate(tpl, "base.html", nil)
+	pageContent.InnerContentString = tpl.String()
+	//exec(w, "index.html")
+	response, _ := json.Marshal(message{Success: true, Message: tpl.String()})
+	w.Write(response)
+}
+func tilePoolsHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+func mosaicsHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func getContent(loggedIn bool) { //content {
 	register := page{
 		HtmlId:  "register-link",
 		Title:   "Registrieren",
@@ -144,8 +179,8 @@ func getContent(loggedIn bool) content {
 		Title:   "Account löschen",
 		Display: loggedIn,
 	}
-
-	pageContent := content{
+	//innerPageContentLocal := template.New("empty")
+	pageContent = content{
 		[]page{
 			register,
 			login,
@@ -155,8 +190,10 @@ func getContent(loggedIn bool) content {
 			mosaics,
 			deleteAccount,
 		},
+		innerPageContent,
+		"",
 	}
-	return pageContent
+	//return pageContent
 }
 
 func isset(name string, data interface{}) bool {
@@ -174,17 +211,24 @@ func noescape(str string) template.HTML {
 }
 
 func main() {
-	//getContent()
-	//pages := &pageContent.Pages
+	var err error
+	t, err = template.New("").Funcs(funcs).ParseGlob("./templates/*")
+	//t, err = template.ParseGlob("./templates/*")
+	//t.Funcs(funcs)
+	if err != nil {
+		log.Fatal(err)
+	}
+	routeMatch, _ = regexp.Compile(`^\/(\w+)`)
+
 	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/logout", logoutHandler)
+	http.HandleFunc("/delete-account", deleteAccountHandler)
+	http.HandleFunc("/base-images", baseImagesHandler)
+	http.HandleFunc("/tile-pools", tilePoolsHandler)
+	http.HandleFunc("/mosaics", mosaicsHandler)
 
-	//for _, page := range pageContent.Pages {
-	//	if isset("Url", page) && page.Url != "" && isset("handler", page) && page.handler != nil {
-	//		http.HandleFunc("/"+page.Url, page.handler)
-	//	}
-	//}
 	http.ListenAndServe(":4242", nil)
 }

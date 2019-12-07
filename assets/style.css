@@ -3,7 +3,7 @@ a {
 }
 
 .navbar {
-    position: fixed;
+    /*position: fixed;*/
     top: 0;
     right: 0;
     left: 0;
@@ -110,4 +110,47 @@ a {
     transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
     background-color: #007bff;
     border-color: #007bff;
+}
+
+#inner-content {
+    padding: 4rem 2rem;
+    margin-bottom: 2rem;
+    background-color: #e9ecef;
+    border-radius: .3rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    height: 40em;
+}
+
+.listing {
+    display: flex;
+    flex-direction: column;
+    padding-left: 0;
+    margin-bottom: 0;
+    width: 20%;
+    height: 30em;
+    overflow: scroll;
+}
+
+.listing-item {
+    position: relative;
+    display: block;
+    padding: .75rem 1.25rem;
+    margin-bottom: -1px;
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, .125);
+    width: 80%;
+    color: #495057;
+    text-align: inherit;
+}
+
+.listing-item-active {
+    z-index: 2;
+    color: #fff;
+    background-color: #007bff;
+    border-color: #007bff;
+}
+.controls{
+    width: 100%;
 }
