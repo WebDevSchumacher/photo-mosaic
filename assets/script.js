@@ -103,14 +103,18 @@ setupBaseListingItems = function () {
     let items = document.getElementsByClassName("listing-item");
     for (let i = 0; i < items.length; i++) {
         items[i].addEventListener("click", function (event) {
-            // let loadBaseSetXhr = new XMLHttpRequest();
-            // loadBaseSetXhr.open("GET", 'http://localhost:4242/base-images/get-set?setId='+event.target.id);
-            // event.target.classList
             let active = document.getElementsByClassName("listing-item-active");
             if(active.length > 0){
                 active[0].classList.remove("listing-item-active");
             }
-            event.target.classList.add("listing-item-active")
+            event.target.classList.add("listing-item-active");
+            let loadBaseSetXhr = new XMLHttpRequest();
+            loadBaseSetXhr.open("GET", 'http://localhost:4242/base-images/get-set?setId='+event.target.id);
+            loadBaseSetXhr.send();
+            loadBaseSetXhr.addEventListener("load", function () {
+                let response = JSON.parse(loadBaseSetXhr.responseText);
+                document.getElementsByClassName("setbrowser-container")[0].innerHTML = response.Message;
+            });
         });
     }
 };
@@ -167,4 +171,13 @@ setupBaseListingControls = function () {
         }
     });
 };
+uploadBaseSubmit = function (target) {
+    let formdata = new FormData(target);
+    let uploadXhr = new XMLHttpRequest();
+    uploadXhr.open("POST", "/base-images/upload");
+    uploadXhr.send(formdata);
+    uploadXhr.addEventListener("load", function () {
+        document.getElementById(formdata.get("set-id").toString()).click();
+    });
 
+};
