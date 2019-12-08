@@ -113,7 +113,7 @@ a {
 }
 
 #inner-content {
-    padding: 4rem 2rem;
+    padding: 2rem;
     margin-bottom: 2rem;
     background-color: #e9ecef;
     border-radius: .3rem;
@@ -151,6 +151,56 @@ a {
     background-color: #007bff;
     border-color: #007bff;
 }
-.controls{
+
+.listing-controls {
     width: 100%;
+    padding: 1em 0;
+}
+
+.setbrowser-container{
+    width: 70%;
+}
+
+.setbrowser {
+    padding: 1rem;
+    margin-bottom: 2rem;
+    background-color: #fff;
+    border-radius: .3rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    height: 30em;
+    overflow: scroll;
+    width: 100%;
+}
+
+.setbrowser-card {
+    width: 14rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    word-wrap: break-word;
+    background-color: #e9ecef;
+    background-clip: border-box;
+    border: 1px solid rgba(0, 0, 0, .125);
+    border-radius: .25rem;
+    height: 45%
+}
+
+.card-body{
+    flex: 1 1 auto;
+    padding: 1.25rem;
+}
+
+.card-icon{
+    width: 100%;
+    height: 50%;
+    border-top-left-radius: calc(.25rem - 1px);
+    border-top-right-radius: calc(.25rem - 1px);
+}
+
+.card-title{
+    margin-bottom: .75rem;
+    font-size: 1.25rem;
 }

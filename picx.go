@@ -44,6 +44,16 @@ type user struct {
 type baseBrowser struct {
 }
 
+type baseImageSet struct {
+	Id   bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	User bson.ObjectId `json:"user" bson:"user,omitempty"`
+	Name string
+}
+
+type baseImageSets struct {
+	Sets []baseImageSet
+}
+
 var innerPageContent = &template.Template{}
 var t *template.Template
 var pageContent content
@@ -53,8 +63,7 @@ var funcs = template.FuncMap{"isset": isset, "noescape": noescape}
 var routeMatch *regexp.Regexp
 
 func exec(w http.ResponseWriter, name string) {
-	w.WriteHeader(200)
-	t.ExecuteTemplate(w, name, pageContent)
+
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -65,8 +74,16 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	tpl := &bytes.Buffer{}
 	t.ExecuteTemplate(tpl, "index_inner.html", nil)
 	pageContent.InnerContentString = tpl.String()
-	exec(w, "index.html")
-	return
+	if loggedIn {
+		http.SetCookie(w, &http.Cookie{
+			Name:    "token",
+			Value:   cookie.Value,
+			Expires: time.Now().Add(500 * time.Second),
+		})
+	}
+
+	w.WriteHeader(200)
+	t.ExecuteTemplate(w, "index.html", pageContent)
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +121,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		"username": r.PostFormValue("username"),
 	}).One(&user)
 	w.Header().Set("Content-Type", "application/json")
-	if err != nil { //len(users) == 0 {
+	if err != nil {
 		response, _ := json.Marshal(message{Success: false, Message: "User nicht gefunden"})
 		w.Write(response)
 		return
@@ -129,17 +146,71 @@ func deleteAccountHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 func baseImagesHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("token")
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249").C("baseImageSets")
+	var sets []baseImageSet
+	err = db.Find(bson.M{
+		"user": cookie.Value,
+	}).All(&sets)
+	var setsCollection baseImageSets
+	setsCollection.Sets = sets
 	tpl := &bytes.Buffer{}
-	t.ExecuteTemplate(tpl, "base.html", nil)
-	pageContent.InnerContentString = tpl.String()
-	//exec(w, "index.html")
+	t.ExecuteTemplate(tpl, "base.html", setsCollection)
 	response, _ := json.Marshal(message{Success: true, Message: tpl.String()})
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   cookie.Value,
+		Expires: time.Now().Add(500 * time.Second),
+	})
 	w.Write(response)
 }
 func tilePoolsHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 func mosaicsHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+func newBaseImagesSetHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("token")
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249").C("baseImageSets")
+	err = db.Insert(bson.M{
+		"name": r.PostFormValue("base-set-name"),
+		"user": cookie.Value,
+	})
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			response, _ := json.Marshal(message{Success: false, Message: "Name bereits vergeben"})
+			w.Write(response)
+		}
+		return
+	}
+	response, _ := json.Marshal(message{Success: true, Message: "Set erfolgreich angelegt"})
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   cookie.Value,
+		Expires: time.Now().Add(500 * time.Second),
+	})
+	w.Write(response)
+}
+func getBaseImagesSetHandler(w http.ResponseWriter, r *http.Request) {
+	//cookie, _ := r.Cookie("token")
+	//session, err := mgo.Dial("localhost")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//defer session.Close()
+	//db := session.DB("Picx_ASchumacher_630249").C("baseImages")
 
 }
 
@@ -227,8 +298,9 @@ func main() {
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/delete-account", deleteAccountHandler)
 	http.HandleFunc("/base-images", baseImagesHandler)
+	http.HandleFunc("/base-images/new-set", newBaseImagesSetHandler)
+	http.HandleFunc("/base-images/get-set", getBaseImagesSetHandler)
 	http.HandleFunc("/tile-pools", tilePoolsHandler)
 	http.HandleFunc("/mosaics", mosaicsHandler)
-
 	http.ListenAndServe(":4242", nil)
 }

@@ -1,20 +1,61 @@
+<script src="assets/base.js"></script>
 <div id="new-base-set-modal" class="modal">
     <div class="modal-content">
-        <span class="close" id="register-close">&times;</span>
-        <form id="register-form">
-            <input class="input" type="text" name="username" placeholder="Benutzer" required>
-            <input class="input" type="password" name="password" placeholder="Passwort" required minlength="3">
-            <button class="button" type="button" id="register-button">registrieren</button>
+        <span class="close" id="new-base-set-close">&times;</span>
+        <form id="new-base-set-form">
+            <input class="input" type="text" name="base-set-name" placeholder="Name" required>
+            <button class="button" type="button" id="new-base-set-button">anlegen</button>
         </form>
     </div>
 </div>
-<div class="controls">
-    <button class="button listing-control" type="button" id="new-base-set" value="qwe">neue Sammlung</button>
-    <button class="button listing-control" type="button" id="edit-base-set">editieren</button>
-    <button class="button listing-control" type="button" id="delete-base-set">löschen</button>
+<!--
+<div id="edit-base-set-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="edit-base-set-close">&times;</span>
+        <form id="new-base-set-form">
+            <input class="input" type="text" name="base-set-name" placeholder="Name" required>
+            <button class="button" type="button" id="edit-base-set-button">umbenennen</button>
+        </form>
+    </div>
 </div>
+<div id="delete-base-set-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="delete-base-set-close">&times;</span>
+        <form id="new-base-set-form">
+            <input class="input" type="text" name="base-set-name" placeholder="Name" required>
+            <button class="button" type="button" id="new-base-set-button">anlegen</button>
+        </form>
+    </div>
+</div>
+-->
 <div class="listing">
-    <a class="listing-item base-listing-item">
-        Cras justo odio
+    <div class="listing-controls">
+        <button class="button listing-control" type="button" id="new-base-set">neue Sammlung</button>
+        <button class="button listing-control" type="button" id="edit-base-set">editieren</button>
+        <button class="button listing-control" type="button" id="delete-base-set">löschen</button>
+    </div>
+    {{ range .Sets }}
+    <a class="listing-item base-listing-item" id="{{.Id.Hex}}">
+        {{.Name}}
     </a>
+    {{end}}
+</div>
+<div class="setbrowser-container">
+    <div class="listing-controls" style="display: flex; flex-direction: row">
+        <form method="post" action="/upload" enctype="multipart/form-data">
+            <input type="file" name="base-image-upload" id="base-image-upload" multiple="multiple">
+            <button type="submit" name="submit">hochladen</button>
+        </form>
+    </div>
+<div class="setbrowser">
+    <div class="setbrowser-card">
+        <img src="../assets/logo.png" class="card-icon" alt="">
+        <div class="card-body">
+            <h5 class="card-title">Card title</h5>
+            <a class="button">Details</a>
+            <a class="button">löschen</a>
+        </div>
+    </div>
+</div>
+
 </div>

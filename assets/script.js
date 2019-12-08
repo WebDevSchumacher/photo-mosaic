@@ -13,25 +13,21 @@ setupNavModals = function () {
         });
     }
     if (loginbtn !== null) {
-
         loginbtn.addEventListener("click", function () {
             loginmodal.style.display = "block";
         });
     }
-    if (registerclose !== null){
-
+    if (registerclose !== null) {
         registerclose.addEventListener("click", function () {
             registermodal.style.display = "none";
         });
     }
-    if (loginclose !== null){
-
+    if (loginclose !== null) {
         loginclose.addEventListener("click", function () {
             loginmodal.style.display = "none";
         });
     }
-    if (messageclose !== null){
-
+    if (messageclose !== null) {
         messageclose.addEventListener("click", function () {
             messagemodal.style.display = "none";
         });
@@ -53,7 +49,7 @@ setupNavHandlers = function () {
     let registerbtn = document.getElementById("register-button");
     let baseimageslink = document.getElementById("base-images-link");
     let loginXhr = new XMLHttpRequest();
-    if (loginbtn !== null){
+    if (loginbtn !== null) {
         loginbtn.addEventListener("click", function () {
             loginXhr.open("POST", 'http://localhost:4242/login');
             let formdata = new FormData(document.getElementById("login-form"));
@@ -69,12 +65,11 @@ setupNavHandlers = function () {
         document.getElementById("message-text").innerText = response.Message;
         document.getElementById("message-modal").style.display = "block";
         if (response.Success && response.Path === "login") {
-            console.log("login success: reload");
             window.location.reload();
         }
     });
     let registerXhr = new XMLHttpRequest();
-    if (registerbtn !== null){
+    if (registerbtn !== null) {
         registerbtn.addEventListener("click", function () {
             registerXhr.open("POST", 'http://localhost:4242/register');
             let formdata = new FormData(document.getElementById("register-form"));
@@ -91,7 +86,7 @@ setupNavHandlers = function () {
         document.getElementById("message-modal").style.display = "block";
     });
     let baseImagesXhr = new XMLHttpRequest();
-    if (baseimageslink !== null){
+    if (baseimageslink !== null) {
         baseimageslink.addEventListener("click", function () {
             baseImagesXhr.open("GET", 'http://localhost:4242/base-images');
             baseImagesXhr.send();
@@ -99,7 +94,6 @@ setupNavHandlers = function () {
     }
     baseImagesXhr.addEventListener("load", function () {
         let response = JSON.parse(baseImagesXhr.responseText);
-        console.log(response);
         document.getElementById("inner-content").innerHTML = response.Message;
         setupBaseListingControls();
         setupBaseListingItems();
@@ -108,19 +102,69 @@ setupNavHandlers = function () {
 setupBaseListingItems = function () {
     let items = document.getElementsByClassName("listing-item");
     for (let i = 0; i < items.length; i++) {
-        items[i].addEventListener("click", function () {
-            console.log(items[i].value);
+        items[i].addEventListener("click", function (event) {
+            // let loadBaseSetXhr = new XMLHttpRequest();
+            // loadBaseSetXhr.open("GET", 'http://localhost:4242/base-images/get-set?setId='+event.target.id);
+            // event.target.classList
+            let active = document.getElementsByClassName("listing-item-active");
+            if(active.length > 0){
+                active[0].classList.remove("listing-item-active");
+            }
+            event.target.classList.add("listing-item-active")
         });
     }
 };
 setupBaseListingControls = function () {
-    let newbaseset = document.getElementById("new-base-set");
-    let editbaseset = document.getElementById("edit-base-set");
-    let deletebaseset = document.getElementById("delete-base-set");
+    let newbasesetbtn = document.getElementById("new-base-set");
+    // let editbaseset = document.getElementById("edit-base-set");
+    // let deletebaseset = document.getElementById("delete-base-set");
+    let newbasesetmodal = document.getElementById("new-base-set-modal");
+    let newbasesetconfirm = document.getElementById("new-base-set-button");
+    let newbasesetclose = document.getElementById("new-base-set-close");
 
-    let newBaseSetXhr = new XMLHttpRequest();
-    if (newbaseset !== null) {
-        newbaseset.addEventListener("click", function () {
+    if (newbasesetbtn !== null) {
+        newbasesetbtn.addEventListener("click", function () {
+            newbasesetmodal.style.display = "block";
         });
     }
+    let newBaseSetXhr = new XMLHttpRequest();
+    if (newbasesetconfirm !== null) {
+        newbasesetconfirm.addEventListener("click", function () {
+            newBaseSetXhr.open("POST", 'http://localhost:4242/base-images/new-set');
+            let formdata = new FormData(document.getElementById("new-base-set-form"));
+            newBaseSetXhr.send(formdata);
+        });
+    }
+    if (newbasesetclose !== null) {
+        newbasesetclose.addEventListener("click", function () {
+            newbasesetmodal.style.display = "none";
+        });
+    }
+    newBaseSetXhr.addEventListener("load", function () {
+        let response = JSON.parse(newBaseSetXhr.responseText);
+        let modals = document.getElementsByClassName("modal");
+        for (let i = 0; i < modals.length; i++) {
+            modals[i].style.display = "none";
+        }
+        if (!response.Success) {
+            document.getElementById("message-text").innerText = response.Message;
+            document.getElementById("message-modal").style.display = "block";
+        } else {
+            let baseImagesXhr = new XMLHttpRequest();
+            baseImagesXhr.open("GET", 'http://localhost:4242/base-images');
+            baseImagesXhr.send();
+            baseImagesXhr.addEventListener("load", function () {
+                let response = JSON.parse(baseImagesXhr.responseText);
+                document.getElementById("inner-content").innerHTML = response.Message;
+                setupBaseListingControls();
+                setupBaseListingItems();
+            });
+        }
+    });
+    window.addEventListener("click", function (event) {
+        if (event.target === newbasesetmodal) {
+            newbasesetmodal.style.display = "none";
+        }
+    });
 };
+
