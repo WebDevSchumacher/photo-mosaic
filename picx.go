@@ -4,20 +4,25 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/disintegration/imaging"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"html/template"
+	"image"
+	"image/color"
 	"io"
+	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type page struct {
-	//Id    bson.ObjectId `json:"id" bson:"_id,omitempty"`
 	HtmlId        string
 	Url           string `json:"group,omitempty" bson:",omitempty"`
 	Title         string
@@ -76,10 +81,10 @@ var funcs = template.FuncMap{"isset": isset, "noescape": noescape}
 var routeMatch *regexp.Regexp
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+
 	cookie, _ := r.Cookie("token")
 	loggedIn := cookie != nil
 	getContent(loggedIn)
-
 	tpl := &bytes.Buffer{}
 	t.ExecuteTemplate(tpl, "index_inner.html", nil)
 	pageContent.InnerContentString = tpl.String()
@@ -87,10 +92,10 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{
 			Name:    "token",
 			Value:   cookie.Value,
-			Expires: time.Now().Add(500 * time.Second),
+			Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+			Path:    "/",
 		})
 	}
-
 	w.WriteHeader(200)
 	t.ExecuteTemplate(w, "index.html", pageContent)
 }
@@ -140,7 +145,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{
 			Name:    "token",
 			Value:   user.Id.Hex(),
-			Expires: time.Now().Add(500 * time.Second),
+			Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+			Path:    "/",
 		})
 		w.Write(response)
 		return
@@ -174,7 +180,8 @@ func baseImagesHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:    "token",
 		Value:   cookie.Value,
-		Expires: time.Now().Add(500 * time.Second),
+		Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+		Path:    "/",
 	})
 	w.Write(response)
 }
@@ -208,7 +215,8 @@ func newBaseImagesSetHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:    "token",
 		Value:   cookie.Value,
-		Expires: time.Now().Add(500 * time.Second),
+		Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+		Path:    "/",
 	})
 	w.Write(response)
 }
@@ -228,14 +236,14 @@ func getBaseImagesSetHandler(w http.ResponseWriter, r *http.Request) {
 	err = imagesDb.Find(bson.M{
 		"set": bson.ObjectIdHex(setId),
 	}).All(&set.Images)
-
 	tpl := &bytes.Buffer{}
 	t.ExecuteTemplate(tpl, "setbrowser.html", set)
 	response, _ := json.Marshal(message{Success: true, Message: tpl.String()})
 	http.SetCookie(w, &http.Cookie{
 		Name:    "token",
 		Value:   cookie.Value,
-		Expires: time.Now().Add(500 * time.Second),
+		Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+		Path:    "/",
 	})
 	w.Write(response)
 }
@@ -243,9 +251,6 @@ func uploadBaseImagesHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie("token")
 	if r.Method == "POST" && cookie != nil {
 		reader, _ := r.MultipartReader()
-		//r.ParseMultipartForm(32 << 20)
-		//fmt.Println(r.MultipartForm)
-		//fmt.Println(reader)
 		session, err := mgo.Dial("localhost")
 		if err != nil {
 			log.Fatal(err)
@@ -257,7 +262,6 @@ func uploadBaseImagesHandler(w http.ResponseWriter, r *http.Request) {
 		fileName := ""
 		fileExtension := ""
 		setId := r.FormValue("set-id")
-		fmt.Println(setId)
 		for {
 			part, err := reader.NextPart()
 			if err == io.EOF {
@@ -291,20 +295,12 @@ func uploadBaseImagesHandler(w http.ResponseWriter, r *http.Request) {
 				"name": fileName,
 			})
 		}
-		//type baseImage struct {
-		//	Id     bson.ObjectId `json:"id" bson:"_id,omitempty"`
-		//	User   bson.ObjectId `json:"user" bson:"user"`
-		//	File   bson.ObjectId `json:"file" bson:"file"`
-		//	Set    bson.ObjectId `json:"set" bson:"set"`
-		//	Name   string        `json:"name" bson:"name"`
-		//	Width  int           `json:",omitempty" bson:",omitempty"`
-		//	Height int           `json:",omitempty" bson:",omitempty"`
-		//}
 		response, _ := json.Marshal(message{Success: true, Message: "erfolgreich hochgeladen"})
 		http.SetCookie(w, &http.Cookie{
 			Name:    "token",
 			Value:   cookie.Value,
-			Expires: time.Now().Add(500 * time.Second),
+			Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+			Path:    "/",
 		})
 		w.Write(response)
 	} else {
@@ -312,7 +308,97 @@ func uploadBaseImagesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getContent(loggedIn bool) { //content {
+func loadImageHandler(w http.ResponseWriter, r *http.Request) {
+	imageId := bson.ObjectIdHex(r.URL.Query().Get("image"))
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249").GridFS("baseImages")
+	image, err := db.OpenId(imageId)
+	w.Header().Add("Content-Type", "image/png")
+	_, err = io.Copy(w, image)
+	err = image.Close()
+}
+
+func testImageHandler(w http.ResponseWriter, r *http.Request) {
+
+	files, err := ioutil.ReadDir("/home/andre/Downloads/webprogPicts/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	var src image.Image
+	i := 0
+	expDir := "/home/andre/Studium/Sem5/Webprog/hausarbeit/tiles-rescale/"
+	for _, f := range files {
+		name := f.Name()
+		nameSplit := strings.Split(name, ".")
+		if len(nameSplit) < 2 {
+			continue
+		}
+		src, _ := imaging.Open("/home/andre/Downloads/webprogPicts/" + f.Name())
+		resized := imaging.Resize(src, 20, 20, imaging.NearestNeighbor)
+		imaging.Save(resized, expDir+"rescale"+strconv.Itoa(i)+"."+nameSplit[1])
+		i++
+		//fmt.Println(i)
+	}
+	return
+
+	//fmt.Println(len(imaging.Histogram(src)))
+	//src, _ := imaging.Open("blackheart.png")
+	fmt.Println(src.At(2, 2).RGBA())
+
+	type SubImager interface {
+		SubImage(r image.Rectangle) image.Image
+	}
+
+	var sub image.Image
+	for i := 0; i < 1540; i += 20 {
+		for j := 0; j < 780; j += 20 {
+
+			sub = src.(SubImager).SubImage(image.Rect(i, j, i+20, j+20))
+			imaging.Save(sub, "./pict/tile"+strconv.Itoa(i)+"-"+strconv.Itoa(j)+".png")
+		}
+	}
+
+	for i := 0; i < 1000; i++ {
+		col := color.RGBA{
+			R: uint8(rand.Uint32()),
+			G: uint8(rand.Uint32()),
+			B: uint8(rand.Uint32()),
+			A: uint8(rand.Uint32()),
+		}
+		pict := imaging.New(20, 20, col)
+		imaging.Save(pict, "./tiles/tile"+strconv.Itoa(i)+".png")
+	}
+}
+
+func main() {
+	var err error
+	t, err = template.New("").Funcs(funcs).ParseGlob("./templates/*")
+	if err != nil {
+		log.Fatal(err)
+	}
+	routeMatch, _ = regexp.Compile(`^\/(\w+)`)
+
+	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
+	http.HandleFunc("/picx", indexHandler)
+	http.HandleFunc("/picx/register", registerHandler)
+	http.HandleFunc("/picx/login", loginHandler)
+	http.HandleFunc("/picx/logout", logoutHandler)
+	http.HandleFunc("/picx/delete-account", deleteAccountHandler)
+	http.HandleFunc("/picx/base-images", baseImagesHandler)
+	http.HandleFunc("/picx/base-images/new-set", newBaseImagesSetHandler)
+	http.HandleFunc("/picx/base-images/get-set", getBaseImagesSetHandler)
+	http.HandleFunc("/picx/base-images/upload", uploadBaseImagesHandler)
+	http.HandleFunc("/picx/tile-pools", tilePoolsHandler)
+	http.HandleFunc("/picx/mosaics", mosaicsHandler)
+	http.HandleFunc("/picx/load-image", loadImageHandler)
+	http.HandleFunc("/picx/test-image", testImageHandler)
+	http.ListenAndServe(":4242", nil)
+}
+func getContent(loggedIn bool) {
 	register := page{
 		HtmlId:  "register-link",
 		Title:   "Registrieren",
@@ -348,7 +434,6 @@ func getContent(loggedIn bool) { //content {
 		Title:   "Account löschen",
 		Display: loggedIn,
 	}
-	//innerPageContentLocal := template.New("empty")
 	pageContent = content{
 		[]page{
 			register,
@@ -362,9 +447,7 @@ func getContent(loggedIn bool) { //content {
 		innerPageContent,
 		"",
 	}
-	//return pageContent
 }
-
 func isset(name string, data interface{}) bool {
 	v := reflect.ValueOf(data)
 	if v.Kind() == reflect.Ptr {
@@ -377,29 +460,4 @@ func isset(name string, data interface{}) bool {
 }
 func noescape(str string) template.HTML {
 	return template.HTML(str)
-}
-
-func main() {
-	var err error
-	t, err = template.New("").Funcs(funcs).ParseGlob("./templates/*")
-	//t, err = template.ParseGlob("./templates/*")
-	//t.Funcs(funcs)
-	if err != nil {
-		log.Fatal(err)
-	}
-	routeMatch, _ = regexp.Compile(`^\/(\w+)`)
-
-	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets"))))
-	http.HandleFunc("/", indexHandler)
-	http.HandleFunc("/register", registerHandler)
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/logout", logoutHandler)
-	http.HandleFunc("/delete-account", deleteAccountHandler)
-	http.HandleFunc("/base-images", baseImagesHandler)
-	http.HandleFunc("/base-images/new-set", newBaseImagesSetHandler)
-	http.HandleFunc("/base-images/get-set", getBaseImagesSetHandler)
-	http.HandleFunc("/base-images/upload", uploadBaseImagesHandler)
-	http.HandleFunc("/tile-pools", tilePoolsHandler)
-	http.HandleFunc("/mosaics", mosaicsHandler)
-	http.ListenAndServe(":4242", nil)
 }

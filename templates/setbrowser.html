@@ -1,5 +1,4 @@
 <div class="listing-controls" style="display: flex; flex-direction: row">
-    <!--<form method="post" action="/base-images/upload" enctype="multipart/form-data">-->
     <form enctype="multipart/form-data">
         <input type="hidden" name="set-id" value="{{.Id.Hex}}">
         <input type="file" name="base-image-upload" id="base-image-upload" multiple="multiple">
@@ -9,11 +8,16 @@
 <div class="setbrowser">
     {{ range .Images }}
     <div class="setbrowser-card">
-        <img src="../assets/logo.png" class="card-icon" alt="">
+        <img src="/picx/load-image?image={{.File.Hex}}" class="card-icon" alt="....">
         <div class="card-body">
-            <h5 class="card-title">Card title</h5>
-            <a class="button">Details</a>
+            <a class="button" onclick="setupDetailsModal({{.File.Hex}})">Details</a>
             <a class="button">löschen</a>
+        </div>
+    </div>
+    <div id="{{.File.Hex}}-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="{{.File.Hex}}-close">&times;</span>
+            <h5>{{.Name}}</h5>
         </div>
     </div>
     {{end}}

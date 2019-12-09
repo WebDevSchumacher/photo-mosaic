@@ -51,7 +51,7 @@ setupNavHandlers = function () {
     let loginXhr = new XMLHttpRequest();
     if (loginbtn !== null) {
         loginbtn.addEventListener("click", function () {
-            loginXhr.open("POST", 'http://localhost:4242/login');
+            loginXhr.open("POST", 'http://localhost:4242/picx/login');
             let formdata = new FormData(document.getElementById("login-form"));
             loginXhr.send(formdata);
         });
@@ -71,7 +71,7 @@ setupNavHandlers = function () {
     let registerXhr = new XMLHttpRequest();
     if (registerbtn !== null) {
         registerbtn.addEventListener("click", function () {
-            registerXhr.open("POST", 'http://localhost:4242/register');
+            registerXhr.open("POST", 'http://localhost:4242/picx/register');
             let formdata = new FormData(document.getElementById("register-form"));
             registerXhr.send(formdata);
         });
@@ -88,7 +88,7 @@ setupNavHandlers = function () {
     let baseImagesXhr = new XMLHttpRequest();
     if (baseimageslink !== null) {
         baseimageslink.addEventListener("click", function () {
-            baseImagesXhr.open("GET", 'http://localhost:4242/base-images');
+            baseImagesXhr.open("GET", 'http://localhost:4242/picx/base-images');
             baseImagesXhr.send();
         });
     }
@@ -109,7 +109,7 @@ setupBaseListingItems = function () {
             }
             event.target.classList.add("listing-item-active");
             let loadBaseSetXhr = new XMLHttpRequest();
-            loadBaseSetXhr.open("GET", 'http://localhost:4242/base-images/get-set?setId='+event.target.id);
+            loadBaseSetXhr.open("GET", 'http://localhost:4242/picx/base-images/get-set?setId='+event.target.id);
             loadBaseSetXhr.send();
             loadBaseSetXhr.addEventListener("load", function () {
                 let response = JSON.parse(loadBaseSetXhr.responseText);
@@ -134,7 +134,7 @@ setupBaseListingControls = function () {
     let newBaseSetXhr = new XMLHttpRequest();
     if (newbasesetconfirm !== null) {
         newbasesetconfirm.addEventListener("click", function () {
-            newBaseSetXhr.open("POST", 'http://localhost:4242/base-images/new-set');
+            newBaseSetXhr.open("POST", 'http://localhost:4242/picx/base-images/new-set');
             let formdata = new FormData(document.getElementById("new-base-set-form"));
             newBaseSetXhr.send(formdata);
         });
@@ -155,7 +155,7 @@ setupBaseListingControls = function () {
             document.getElementById("message-modal").style.display = "block";
         } else {
             let baseImagesXhr = new XMLHttpRequest();
-            baseImagesXhr.open("GET", 'http://localhost:4242/base-images');
+            baseImagesXhr.open("GET", 'http://localhost:4242/picx/base-images');
             baseImagesXhr.send();
             baseImagesXhr.addEventListener("load", function () {
                 let response = JSON.parse(baseImagesXhr.responseText);
@@ -174,10 +174,22 @@ setupBaseListingControls = function () {
 uploadBaseSubmit = function (target) {
     let formdata = new FormData(target);
     let uploadXhr = new XMLHttpRequest();
-    uploadXhr.open("POST", "/base-images/upload");
+    uploadXhr.open("POST", "/picx/base-images/upload");
     uploadXhr.send(formdata);
     uploadXhr.addEventListener("load", function () {
         document.getElementById(formdata.get("set-id").toString()).click();
     });
-
+};
+setupDetailsModal = function (id) {
+    let modal = document.getElementById(id+"-modal");
+    if(modal !== null){
+        let close = document.getElementById(id+"-close");
+        modal.style.display = "block";
+        close.addEventListener("click", function () {
+            modal.style.display = "none";
+        });
+        modal.addEventListener("click", function () {
+            modal.style.display = "none";
+        });
+    }
 };
