@@ -514,39 +514,42 @@ func createMosaicHandler(w http.ResponseWriter, r *http.Request) { //see upload 
 		file := getBaseImage(r.PostFormValue("baseId"))
 		baseImg, _ := imaging.Decode(file)
 		bounds := baseImg.Bounds()
-		width := bounds.Max.X - bounds.Min.X
-		height := bounds.Max.Y - bounds.Min.Y
+		//width := bounds.Max.X - bounds.Min.X
+		//height := bounds.Max.Y - bounds.Min.Y
 
-		mosaic := imaging.New(width*20, height*20, color.RGBA{
-			R: 0,
-			G: 0,
-			B: 0,
-			A: 255,
-		})
+		//mosaic := imaging.New(width*20, height*20, color.RGBA{
+		//	R: 0,
+		//	G: 0,
+		//	B: 0,
+		//	A: 255,
+		//})
 		type delta struct {
 			Delta float64
 			File  bson.ObjectId
 		}
-		var tiles []delta
+		tiles := make([]delta, len(tilePool))
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 				pxR, pxG, pxB, _ := baseImg.At(x, y).RGBA()
-				for i := 0; i < len(tilePool); i++ {
-					tile := tilePool[0]
-					dR := tile.AvgR - uint8(pxR>>8)
-					dG := tile.AvgG - uint8(pxG>>8)
-					dB := tile.AvgB - uint8(pxB>>8)
-					d := math.Abs(math.Sqrt(float64(dR) + float64(dG) + float64(dB)))
-					_ = append(tiles, delta{
-						Delta: d,
-						File:  tile.File,
-					})
-				}
+				//for i := 0; i < len(tilePool); i++ {
+				tile := tilePool[0]
+				dR := tile.AvgR - uint8(pxR>>8)
+				dG := tile.AvgG - uint8(pxG>>8)
+				dB := tile.AvgB - uint8(pxB>>8)
+				d := math.Abs(math.Sqrt(float64(dR) + float64(dG) + float64(dB)))
+				_ = append(tiles, delta{
+					Delta: d,
+					File:  tile.File,
+				})
+				//}
 				sort.SliceStable(tiles, func(i, j int) bool {
 					return tiles[i].Delta < tiles[j].Delta
 				})
-
+				bestN := tiles[:20]
+				fmt.Println(bestN)
+				break
 			}
+			break
 		}
 
 		//avgR, avgG, avgB, avgA := averageColor(baseImg)
