@@ -14,12 +14,7 @@
         <button class="button listing-control" type="button" id="delete-mosaic-collection">löschen</button>
     </div>
     {{ range .Collections }}
-        <a class="listing-item mosaic-listing-item" id="{{.Id.Hex}}">
-            {{.Name}}
-        </a>
+        <a class="listing-item mosaic-listing-item" id="{{.Id.Hex}}">{{.Name}}</a>
     {{end}}
 </div>
-<div class="collectionbrowser-container">
-
-
-</div>
+<div class="collectionbrowser-container"></div>

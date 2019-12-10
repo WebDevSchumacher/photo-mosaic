@@ -208,15 +208,12 @@ uploadBaseSubmit = function (target) {
         document.getElementById(formdata.get("set-id").toString()).click();
     });
 };
-setupDetailsModal = function (id) {
-    let modal = document.getElementById(id+"-modal");
+setupModal = function (id, type) {
+    let modal = document.getElementById(id+"-modal-"+type);
     if(modal !== null){
-        let close = document.getElementById(id+"-close");
+        let close = document.getElementById(id+"-close-"+type);
         modal.style.display = "block";
         close.addEventListener("click", function () {
-            modal.style.display = "none";
-        });
-        modal.addEventListener("click", function () {
             modal.style.display = "none";
         });
     }
@@ -373,5 +370,18 @@ setupMosaicListingControls = function () {
         if (event.target === newmosaiccollectionmodal) {
             newmosaiccollectionmodal.style.display = "none";
         }
+    });
+};
+createMosaic = function (target) {
+    target.innerText = "";
+    target.innerHTML = '<div class="lds-ring"><div></div><div></div><div></div><div></div></div>';
+    let formdata = new FormData(target.parentElement);
+    let uploadXhr = new XMLHttpRequest();
+    uploadXhr.open("POST", "/picx/create-mosaic");
+    uploadXhr.send(formdata);
+    uploadXhr.addEventListener("load", function () {
+        // document.getElementById(formdata.get("set-id").toString()).click();
+        target.innerHTML = "";
+        target.innerText = "Mosaik erstellt"
     });
 };

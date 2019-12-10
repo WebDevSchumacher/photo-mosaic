@@ -10,13 +10,13 @@
     <div class="poolbrowser-card">
         <img src="/picx/load-tile?image={{.File.Hex}}" class="card-icon" alt="....">
         <div class="card-body">
-            <a class="button" onclick="setupDetailsModal({{.File.Hex}})">Details</a>
+            <a class="button" onclick="setupModal({{.File.Hex}}, 'details')">Details</a>
             <a class="button">löschen</a>
         </div>
     </div>
-    <div id="{{.File.Hex}}-modal" class="modal">
+    <div id="{{.File.Hex}}-modal-details" class="modal">
         <div class="modal-content">
-            <span class="close" id="{{.File.Hex}}-close">&times;</span>
+            <span class="close" id="{{.File.Hex}}-close-details">&times;</span>
             <h5>{{.Name}}</h5>
         </div>
     </div>

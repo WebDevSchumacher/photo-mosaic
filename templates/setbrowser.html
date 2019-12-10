@@ -10,14 +10,38 @@
     <div class="setbrowser-card">
         <img src="/picx/load-base-image?image={{.File.Hex}}" class="card-icon" alt="....">
         <div class="card-body">
-            <a class="button" onclick="setupDetailsModal({{.File.Hex}})">Details</a>
+            <a class="button" onclick="setupModal({{.File.Hex}}, 'details')">Details</a>
+            <a class="button" onclick="setupModal({{.File.Hex}}, 'mosaic')">Mosaik</a>
+            <hr>
             <a class="button">löschen</a>
         </div>
     </div>
-    <div id="{{.File.Hex}}-modal" class="modal">
+    <div id="{{.File.Hex}}-modal-details" class="modal">
         <div class="modal-content">
-            <span class="close" id="{{.File.Hex}}-close">&times;</span>
+            <span class="close" id="{{.File.Hex}}-close-details">&times;</span>
             <h5>{{.Name}}</h5>
+        </div>
+    </div>
+    <div id="{{.File.Hex}}-modal-mosaic" class="modal">
+        <div class="modal-content">
+            <span class="close" id="{{.File.Hex}}-close-mosaic">&times;</span>
+            <h5>{{.Name}}</h5>
+            <form>
+                <input type="hidden" name="baseId" value="{{.File.Hex}}">
+                <input type="checkbox" name="multiUseTile" value="multiuseTile"><label for="multiUseTile">Kachel mehrfach verwenden?</label><br><br>
+                Kachelset:<br>
+                {{range $.Pools }}
+                    <input type="radio" name="tilePool" value="{{.Id.Hex}}" id="{{.Id.Hex}}"><label for="{{.Id.Hex}}">{{.Name}}</label>
+                {{end}}
+                <br><br>
+                Mosaiksammlung:<br>
+                {{range $.Collections }}
+                    <input type="radio" name="mosaicCollection" value="{{.Id.Hex}}" id="{{.Id.Hex}}"><label for="{{.Id.Hex}}">{{.Name}}</label>
+                {{end}}
+                <br><br>
+                <input type="number" name="nBest" min="0" max="20" value="0"><label for="nBest">aus N besten Kacheln wählen</label><br><br>
+                <a class="button" onclick="createMosaic(this)">Mosaik</a>
+            </form>
         </div>
     </div>
     {{end}}

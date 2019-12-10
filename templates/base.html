@@ -1,4 +1,3 @@
-<script src="assets/base.js"></script>
 <div id="new-base-set-modal" class="modal">
     <div class="modal-content">
         <span class="close" id="new-base-set-close">&times;</span>
@@ -15,12 +14,7 @@
         <button class="button listing-control" type="button" id="delete-base-set">löschen</button>
     </div>
     {{ range .Sets }}
-    <a class="listing-item base-listing-item" id="{{.Id.Hex}}">
-        {{.Name}}
-    </a>
+        <a class="listing-item base-listing-item" id="{{.Id.Hex}}">{{.Name}}</a>
     {{end}}
 </div>
-<div class="setbrowser-container">
-
-
-</div>
+<div class="setbrowser-container"></div>
