@@ -13,6 +13,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
 	"reflect"
@@ -35,34 +36,66 @@ type content struct {
 	InnerContent       *template.Template
 	InnerContentString string
 }
-
 type message struct {
 	Success bool
 	Message string
 	Path    string `json:",omitempty" bson:",omitempty"`
 }
-
 type user struct {
 	Id       bson.ObjectId `json:"id" bson:"_id,omitempty"`
 	Username string        `json:"username" bson:"username"`
 	Password string        `json:"password" bson:"password"`
 }
-
-type baseBrowser struct {
-}
-
 type baseImageSet struct {
 	Id     bson.ObjectId `json:"id" bson:"_id,omitempty"`
 	User   bson.ObjectId `json:"user" bson:"user"`
 	Name   string        `json:"name" bson:"name"`
 	Images []baseImage   `json:",omitempty" bson:",omitempty"`
 }
-
+type tilePool struct {
+	Id     bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	User   bson.ObjectId `json:"user" bson:"user"`
+	Name   string        `json:"name" bson:"name"`
+	Images []tile        `json:",omitempty" bson:",omitempty"`
+}
+type mosaicCollection struct {
+	Id     bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	User   bson.ObjectId `json:"user" bson:"user"`
+	Name   string        `json:"name" bson:"name"`
+	Images []mosaic      `json:",omitempty" bson:",omitempty"`
+}
 type baseImageSets struct {
 	Sets []baseImageSet
 }
-
+type tilePools struct {
+	Pools []tilePool
+}
+type mosaicCollections struct {
+	Collections []mosaicCollection
+}
 type baseImage struct {
+	Id     bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	User   bson.ObjectId `json:"user" bson:"user"`
+	File   bson.ObjectId `json:"file" bson:"file"`
+	Set    bson.ObjectId `json:"set" bson:"set"`
+	Name   string        `json:"name" bson:"name"`
+	Width  int           `json:",omitempty" bson:",omitempty"`
+	Height int           `json:",omitempty" bson:",omitempty"`
+}
+type tile struct {
+	Id     bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	User   bson.ObjectId `json:"user" bson:"user"`
+	File   bson.ObjectId `json:"file" bson:"file"`
+	Pool   bson.ObjectId `json:"pool" bson:"pool"`
+	Name   string        `json:"name" bson:"name"`
+	Width  int           `json:",omitempty" bson:",omitempty"`
+	Height int           `json:",omitempty" bson:",omitempty"`
+	AvgR   uint8         `json:"avgr" bson:"avgr"`
+	AvgG   uint8         `json:"avgg" bson:"avgg"`
+	AvgB   uint8         `json:"avgb" bson:"avgb"`
+	AvgA   uint8         `json:"avga" bson:"avga"`
+}
+type mosaic struct {
 	Id     bson.ObjectId `json:"id" bson:"_id,omitempty"`
 	User   bson.ObjectId `json:"user" bson:"user"`
 	File   bson.ObjectId `json:"file" bson:"file"`
@@ -185,11 +218,56 @@ func baseImagesHandler(w http.ResponseWriter, r *http.Request) {
 	})
 	w.Write(response)
 }
-func tilePoolsHandler(w http.ResponseWriter, r *http.Request) {
-
+func tilesHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("token")
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249").C("tilePools")
+	var pools []tilePool
+	err = db.Find(bson.M{
+		"user": bson.ObjectIdHex(cookie.Value),
+	}).All(&pools)
+	var poolsCollection tilePools
+	poolsCollection.Pools = pools
+	tpl := &bytes.Buffer{}
+	t.ExecuteTemplate(tpl, "tiles.html", poolsCollection)
+	response, _ := json.Marshal(message{Success: true, Message: tpl.String()})
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   cookie.Value,
+		Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+		Path:    "/",
+	})
+	w.Write(response)
 }
-func mosaicsHandler(w http.ResponseWriter, r *http.Request) {
 
+func mosaicsHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("token")
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249").C("mosaicCollections")
+	var collections []mosaicCollection
+	err = db.Find(bson.M{
+		"user": bson.ObjectIdHex(cookie.Value),
+	}).All(&collections)
+	var mosaicCollections mosaicCollections
+	mosaicCollections.Collections = collections
+	tpl := &bytes.Buffer{}
+	t.ExecuteTemplate(tpl, "mosaics.html", mosaicCollections)
+	response, _ := json.Marshal(message{Success: true, Message: tpl.String()})
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   cookie.Value,
+		Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+		Path:    "/",
+	})
+	w.Write(response)
 }
 func newBaseImagesSetHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie("token")
@@ -201,6 +279,64 @@ func newBaseImagesSetHandler(w http.ResponseWriter, r *http.Request) {
 	db := session.DB("Picx_ASchumacher_630249").C("baseImageSets")
 	err = db.Insert(bson.M{
 		"name": r.PostFormValue("base-set-name"),
+		"user": bson.ObjectIdHex(cookie.Value),
+	})
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			response, _ := json.Marshal(message{Success: false, Message: "Name bereits vergeben"})
+			w.Write(response)
+		}
+		return
+	}
+	response, _ := json.Marshal(message{Success: true, Message: "Set erfolgreich angelegt"})
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   cookie.Value,
+		Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+		Path:    "/",
+	})
+	w.Write(response)
+}
+func newTilePoolHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("token")
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249").C("tilePools")
+	err = db.Insert(bson.M{
+		"name": r.PostFormValue("tile-pool-name"),
+		"user": bson.ObjectIdHex(cookie.Value),
+	})
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			response, _ := json.Marshal(message{Success: false, Message: "Name bereits vergeben"})
+			w.Write(response)
+		}
+		return
+	}
+	response, _ := json.Marshal(message{Success: true, Message: "Set erfolgreich angelegt"})
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   cookie.Value,
+		Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+		Path:    "/",
+	})
+	w.Write(response)
+}
+func newMosaicCollectionHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("token")
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249").C("mosaicCollections")
+	err = db.Insert(bson.M{
+		"name": r.PostFormValue("mosaic-collection-name"),
 		"user": bson.ObjectIdHex(cookie.Value),
 	})
 	w.Header().Set("Content-Type", "application/json")
@@ -247,6 +383,60 @@ func getBaseImagesSetHandler(w http.ResponseWriter, r *http.Request) {
 	})
 	w.Write(response)
 }
+func getTilePoolHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("token")
+	poolId := r.URL.Query().Get("poolId")
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249")
+	poolsDb := db.C("tilePools")
+	tilesDb := db.C("tilesMeta")
+	var pool tilePool
+	err = poolsDb.FindId(bson.ObjectIdHex(poolId)).One(&pool)
+	err = tilesDb.Find(bson.M{
+		"pool": bson.ObjectIdHex(poolId),
+	}).All(&pool.Images)
+	tpl := &bytes.Buffer{}
+	t.ExecuteTemplate(tpl, "poolbrowser.html", pool)
+	response, _ := json.Marshal(message{Success: true, Message: tpl.String()})
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   cookie.Value,
+		Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+		Path:    "/",
+	})
+	w.Write(response)
+}
+func getMosaicCollectionHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("token")
+	collectionId := r.URL.Query().Get("collectionId")
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249")
+	collectionsDb := db.C("mosaicCollections")
+	imagesDb := db.C("mosaicsMeta")
+	var collection mosaicCollection
+	err = collectionsDb.FindId(bson.ObjectIdHex(collectionId)).One(&collection)
+	err = imagesDb.Find(bson.M{
+		"collection": bson.ObjectIdHex(collectionId),
+	}).All(&collection.Images)
+	tpl := &bytes.Buffer{}
+	t.ExecuteTemplate(tpl, "collectionbrowser.html", collection)
+	response, _ := json.Marshal(message{Success: true, Message: tpl.String()})
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   cookie.Value,
+		Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+		Path:    "/",
+	})
+	w.Write(response)
+}
 func uploadBaseImagesHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie("token")
 	if r.Method == "POST" && cookie != nil {
@@ -271,7 +461,6 @@ func uploadBaseImagesHandler(w http.ResponseWriter, r *http.Request) {
 				buf := new(bytes.Buffer)
 				buf.ReadFrom(part)
 				setId = buf.String()
-				fmt.Println(setId)
 			}
 			if part.FileName() == "" {
 				continue
@@ -308,7 +497,75 @@ func uploadBaseImagesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func loadImageHandler(w http.ResponseWriter, r *http.Request) {
+func uploadTilesHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("token")
+	if r.Method == "POST" && cookie != nil {
+		reader, _ := r.MultipartReader()
+		session, err := mgo.Dial("localhost")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer session.Close()
+		db := session.DB("Picx_ASchumacher_630249")
+		tilesMeta := db.C("tilesMeta")
+		tilesGridFs := db.GridFS("tiles")
+		fileName := ""
+		fileExtension := ""
+		poolId := r.FormValue("pool-id")
+		for {
+			part, err := reader.NextPart()
+			if err == io.EOF {
+				break
+			}
+			if part.FormName() == "pool-id" {
+				buf := new(bytes.Buffer)
+				buf.ReadFrom(part)
+				poolId = buf.String()
+			}
+			if part.FileName() == "" {
+				continue
+			}
+			fileName = part.FileName()
+			if strings.Contains(fileName, ".") {
+				split2 := strings.Split(fileName, ".")
+				fileExtension = split2[len(split2)-1]
+			}
+			fileExtension = strings.ToLower(fileExtension)
+			if fileExtension != "jpg" && fileExtension != "jpeg" && fileExtension != "png" {
+				continue
+			}
+			var buf bytes.Buffer
+			tee := io.TeeReader(part, &buf)
+			img, _, err := image.Decode(tee)
+			avgR, avgG, avgB, avgA := averageColor(img)
+			gridFile, err := tilesGridFs.Create(fileName)
+			_, err = io.Copy(gridFile, &buf)
+			err = gridFile.Close()
+			err = tilesMeta.Insert(bson.M{
+				"user": bson.ObjectIdHex(cookie.Value),
+				"file": gridFile.Id(),
+				"pool": bson.ObjectIdHex(poolId),
+				"name": fileName,
+				"avgr": avgR,
+				"avgg": avgG,
+				"avgb": avgB,
+				"avga": avgA,
+			})
+		}
+		response, _ := json.Marshal(message{Success: true, Message: "erfolgreich hochgeladen"})
+		http.SetCookie(w, &http.Cookie{
+			Name:    "token",
+			Value:   cookie.Value,
+			Expires: time.Now().Add(time.Second * 60 * 60 * 24),
+			Path:    "/",
+		})
+		w.Write(response)
+	} else {
+		indexHandler(w, r)
+	}
+}
+
+func loadBaseImageHandler(w http.ResponseWriter, r *http.Request) {
 	imageId := bson.ObjectIdHex(r.URL.Query().Get("image"))
 	session, err := mgo.Dial("localhost")
 	if err != nil {
@@ -322,13 +579,38 @@ func loadImageHandler(w http.ResponseWriter, r *http.Request) {
 	err = image.Close()
 }
 
-func testImageHandler(w http.ResponseWriter, r *http.Request) {
+func loadTileHandler(w http.ResponseWriter, r *http.Request) {
+	imageId := bson.ObjectIdHex(r.URL.Query().Get("image"))
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer session.Close()
+	db := session.DB("Picx_ASchumacher_630249").GridFS("tiles")
+	image, err := db.OpenId(imageId)
+	w.Header().Add("Content-Type", "image/png")
+	_, err = io.Copy(w, image)
+	err = image.Close()
+}
 
+func testImageHandler(w http.ResponseWriter, r *http.Request) {
+	src, _ := imaging.Open("./tiles-rescale/rescale0.jpg")
+	fmt.Println(averageColor(src))
+
+	//fmt.Println(uint8(avgR), uint8(avgG), uint8(avgB), uint8(avgA))
+	//fmt.Println(math.Round(avgR), math.Round(avgG), math.Round(avgB), math.Round(avgA))
+	//fmt.Println(uint8(math.Round(avgR)), uint8(math.Round(avgG)), uint8(math.Round(avgB)), uint8(math.Round(avgA)))
+	//
+	//fmt.Println(avgColor)
+	//avgColor.RGBA()
+
+	return
 	files, err := ioutil.ReadDir("/home/andre/Downloads/webprogPicts/")
 	if err != nil {
 		log.Fatal(err)
 	}
-	var src image.Image
+	//var src image.Image
+
 	i := 0
 	expDir := "/home/andre/Studium/Sem5/Webprog/hausarbeit/tiles-rescale/"
 	for _, f := range files {
@@ -341,7 +623,6 @@ func testImageHandler(w http.ResponseWriter, r *http.Request) {
 		resized := imaging.Resize(src, 20, 20, imaging.NearestNeighbor)
 		imaging.Save(resized, expDir+"rescale"+strconv.Itoa(i)+"."+nameSplit[1])
 		i++
-		//fmt.Println(i)
 	}
 	return
 
@@ -392,9 +673,15 @@ func main() {
 	http.HandleFunc("/picx/base-images/new-set", newBaseImagesSetHandler)
 	http.HandleFunc("/picx/base-images/get-set", getBaseImagesSetHandler)
 	http.HandleFunc("/picx/base-images/upload", uploadBaseImagesHandler)
-	http.HandleFunc("/picx/tile-pools", tilePoolsHandler)
-	http.HandleFunc("/picx/mosaics", mosaicsHandler)
-	http.HandleFunc("/picx/load-image", loadImageHandler)
+	http.HandleFunc("/picx/tile-pools", tilesHandler)
+	http.HandleFunc("/picx/tile-pools/new-pool", newTilePoolHandler)
+	http.HandleFunc("/picx/tile-pools/get-pool", getTilePoolHandler)
+	http.HandleFunc("/picx/tile-pools/upload", uploadTilesHandler)
+	http.HandleFunc("/picx/mosaic-collections", mosaicsHandler)
+	http.HandleFunc("/picx/mosaic-collections/new-collection", newMosaicCollectionHandler)
+	http.HandleFunc("/picx/mosaic-collections/get-collection", getMosaicCollectionHandler)
+	http.HandleFunc("/picx/load-base-image", loadBaseImageHandler)
+	http.HandleFunc("/picx/load-tile", loadTileHandler)
 	http.HandleFunc("/picx/test-image", testImageHandler)
 	http.ListenAndServe(":4242", nil)
 }
@@ -420,12 +707,12 @@ func getContent(loggedIn bool) {
 		Display: loggedIn,
 	}
 	pools := page{
-		HtmlId:  "pools-link",
+		HtmlId:  "tile-pools-link",
 		Title:   "Kachelpools",
 		Display: loggedIn,
 	}
 	mosaics := page{
-		HtmlId:  "mosaics-link",
+		HtmlId:  "mosaic-collections-link",
 		Title:   "Mosaike",
 		Display: loggedIn,
 	}
@@ -460,4 +747,33 @@ func isset(name string, data interface{}) bool {
 }
 func noescape(str string) template.HTML {
 	return template.HTML(str)
+}
+
+func averageColor(src image.Image) (uint8, uint8, uint8, uint8) {
+	bounds := src.Bounds()
+	width := bounds.Max.X - bounds.Min.X
+	height := bounds.Max.Y - bounds.Min.Y
+	pixels := width * height
+	fmt.Println(pixels)
+	var pxr uint32
+	var pxg uint32
+	var pxb uint32
+	var pxa uint32
+	var avgR float64
+	var avgG float64
+	var avgB float64
+	var avgA float64
+	var count float64
+	count = 1
+	for x := bounds.Min.X; x < bounds.Max.X; x++ {
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			pxr, pxg, pxb, pxa = src.At(x, y).RGBA()
+			avgR += (float64(pxr>>8) - avgR) / count
+			avgG += (float64(pxg>>8) - avgG) / count
+			avgB += (float64(pxb>>8) - avgB) / count
+			avgA += (float64(pxa>>8) - avgA) / count
+			count++
+		}
+	}
+	return uint8(math.Round(avgR)), uint8(math.Round(avgG)), uint8(math.Round(avgB)), uint8(math.Round(avgA))
 }

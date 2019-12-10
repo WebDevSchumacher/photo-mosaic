@@ -1,10 +1,26 @@
-<div class="controls">
-    <button class="button" type="button" id="new-tile-set">neue Sammlung</button>
-    <button class="button" type="button" id="edit-tile-set">editieren</button>
-    <button class="button" type="button" id="delete-tile-set">löschen</button>
+<script src="assets/base.js"></script>
+<div id="new-tile-pool-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="new-tile-pool-close">&times;</span>
+        <form id="new-tile-pool-form">
+            <input class="input" type="text" name="tile-pool-name" placeholder="Name" required>
+            <button class="button" type="button" id="new-tile-pool-button">anlegen</button>
+        </form>
+    </div>
 </div>
 <div class="listing">
-    <a href="#" class="listing-item">
-        Cras justo odio
-    </a>
+    <div class="listing-controls">
+        <button class="button listing-control" type="button" id="new-tile-pool">neuer Pool</button>
+        <button class="button listing-control" type="button" id="edit-tile-pool">editieren</button>
+        <button class="button listing-control" type="button" id="delete-tile-pool">löschen</button>
+    </div>
+    {{ range .Pools }}
+        <a class="listing-item tile-listing-item" id="{{.Id.Hex}}">
+            {{.Name}}
+        </a>
+    {{end}}
+</div>
+<div class="poolbrowser-container">
+
+
 </div>

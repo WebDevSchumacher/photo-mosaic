@@ -1,0 +1,25 @@
+<div id="new-mosaic-collection-modal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="new-mosaic-collection-close">&times;</span>
+        <form id="new-mosaic-collection-form">
+            <input class="input" type="text" name="mosaic-collection-name" placeholder="Name" required>
+            <button class="button" type="button" id="new-mosaic-collection-button">anlegen</button>
+        </form>
+    </div>
+</div>
+<div class="listing">
+    <div class="listing-controls">
+        <button class="button listing-control" type="button" id="new-mosaic-collection">neue Collection</button>
+        <button class="button listing-control" type="button" id="edit-mosaic-collection">editieren</button>
+        <button class="button listing-control" type="button" id="delete-mosaic-collection">löschen</button>
+    </div>
+    {{ range .Collections }}
+        <a class="listing-item mosaic-listing-item" id="{{.Id.Hex}}">
+            {{.Name}}
+        </a>
+    {{end}}
+</div>
+<div class="collectionbrowser-container">
+
+
+</div>

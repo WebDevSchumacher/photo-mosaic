@@ -1,0 +1,24 @@
+<!--<div class="listing-controls" style="display: flex; flex-direction: row">
+    <form enctype="multipart/form-data">
+        <input type="hidden" name="collection-id" value="{{.Id.Hex}}">
+        <input type="file" name="tile-upload" id="tile-upload" multiple="multiple">
+        <button type="button" class="button" onclick="uploadTileSubmit(this.parentElement)">upload</button>
+    </form>
+</div>-->
+<div class="collectionbrowser">
+    {{ range .Images }}
+    <div class="collectionbrowser-card">
+        <img src="/picx/load-mosaic?image={{.File.Hex}}" class="card-icon" alt="....">
+        <div class="card-body">
+            <a class="button" onclick="setupDetailsModal({{.File.Hex}})">Details</a>
+            <a class="button">löschen</a>
+        </div>
+    </div>
+    <div id="{{.File.Hex}}-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="{{.File.Hex}}-close">&times;</span>
+            <h5>{{.Name}}</h5>
+        </div>
+    </div>
+    {{end}}
+</div>

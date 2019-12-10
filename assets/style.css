@@ -3,7 +3,6 @@ a {
 }
 
 .navbar {
-    /*position: fixed;*/
     top: 0;
     right: 0;
     left: 0;
@@ -157,11 +156,11 @@ a {
     padding: 1em 0;
 }
 
-.setbrowser-container{
+.setbrowser-container, .poolbrowser-container, .collectionbrowser-container{
     width: 70%;
 }
 
-.setbrowser {
+.setbrowser, .poolbrowser, .collectionbrowser {
     padding: 1rem;
     margin-bottom: 2rem;
     background-color: #fff;
@@ -174,7 +173,7 @@ a {
     width: 100%;
 }
 
-.setbrowser-card {
+.setbrowser-card, .poolbrowser-card, .collectionbrowser-card {
     width: 14rem;
     position: relative;
     display: flex;
