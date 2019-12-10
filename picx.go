@@ -328,7 +328,6 @@ func getBaseImagesSetHandler(w http.ResponseWriter, r *http.Request) {
 func getTilePoolHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie("token")
 	poolId := r.URL.Query().Get("poolId")
-	db := session.DB("Picx_ASchumacher_630249")
 	poolsDb := db.C("tilePools")
 	tilesDb := db.C("tilesMeta")
 	var pool tilePool
@@ -431,6 +430,7 @@ func uploadTilesHandler(w http.ResponseWriter, r *http.Request) {
 		fileName := ""
 		fileExtension := ""
 		poolId := r.FormValue("pool-id")
+		fmt.Println(poolId)
 		for {
 			part, err := reader.NextPart()
 			if err == io.EOF {
@@ -505,7 +505,6 @@ func loadTileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func loadMosaicHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("load mosaic")
 	imageId := bson.ObjectIdHex(r.URL.Query().Get("image"))
 	dbCollection := db.GridFS("mosaics")
 	img, _ := dbCollection.OpenId(imageId)
@@ -540,10 +539,13 @@ func createMosaicHandler(w http.ResponseWriter, r *http.Request) {
 				pxR, pxG, pxB, _ := baseImg.At(x, y).RGBA()
 				for i := 0; i < len(tilePool); i++ {
 					tile := tilePool[i]
-					dR := tile.AvgR - uint8(pxR>>8)
-					dG := tile.AvgG - uint8(pxG>>8)
-					dB := tile.AvgB - uint8(pxB>>8)
-					d := math.Abs(math.Sqrt(float64(dR) + float64(dG) + float64(dB)))
+					//dR := tile.AvgR - uint8(pxR>>8)
+					//dG := tile.AvgG - uint8(pxG>>8)
+					//dB := tile.AvgB - uint8(pxB>>8)
+					dR := uint8(pxR>>8) - tile.AvgR
+					dG := uint8(pxG>>8) - tile.AvgG
+					dB := uint8(pxB>>8) - tile.AvgB
+					d := math.Abs(math.Sqrt(math.Pow(float64(dR), 2) + math.Pow(float64(dG), 2) + math.Pow(float64(dB), 2)))
 					tiles[i] = delta{
 						Delta: d,
 						File:  tile.File,
@@ -565,6 +567,7 @@ func createMosaicHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			fmt.Println(x)
 		}
+		fmt.Println("done")
 		//imaging.Save(mosaic, "./tmp.png")
 		//someFile, _ := os.Open("./tmp.png")
 		//buf := []byte{}
